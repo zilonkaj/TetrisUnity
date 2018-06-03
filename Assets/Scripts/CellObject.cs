@@ -6,17 +6,13 @@ using UnityEngine;
 public class CellObject : MonoBehaviour {
 
     public Vector2 pos;
-    public bool isBlock = false;
 
-    public void changeColor(char color)
+    public void changeColor(Color color)
     {
         // get renderer. renderer contains material, which displays color
         Renderer r = GetComponent<Renderer>();
 
-        if (color == 'R')
-            r.material.SetColor("_Color", Color.red);
-        else if (color == 'W')
-            r.material.SetColor("_Color", Color.white);
+        r.material.SetColor("_Color", color);
     }
 
 }

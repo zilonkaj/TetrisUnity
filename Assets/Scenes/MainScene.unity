@@ -200,7 +200,7 @@ GameObject:
   - component: {fileID: 887588579}
   - component: {fileID: 887588578}
   m_Layer: 0
-  m_Name: TetronimoManager
+  m_Name: TetrominoManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -217,49 +217,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17cb3ac63470547e8a4b14acf5e93d56, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  shapes:
-  - name: Plus
-    origin: {x: 0, y: 0}
-    points:
-    - {x: -1, y: 0}
-    - {x: 1, y: 0}
-    - {x: 0, y: 1}
-  - name: Tblock
-    origin: {x: 0, y: 0}
-    points:
-    - {x: -1, y: 0}
-    - {x: 1, y: 0}
-    - {x: 0, y: -1}
-  - name: Lblock
-    origin: {x: 0, y: 0}
-    points:
-    - {x: 1, y: 0}
-    - {x: 0, y: 1}
-    - {x: 0, y: 2}
-  - name: Square
-    origin: {x: 0, y: 0}
-    points:
-    - {x: 1, y: 0}
-    - {x: 0, y: 1}
-    - {x: 1, y: 1}
-  - name: Jblock
-    origin: {x: 0, y: 0}
-    points:
-    - {x: -1, y: 0}
-    - {x: 0, y: 1}
-    - {x: 0, y: 2}
-  - name: Zblock
-    origin: {x: 0, y: 0}
-    points:
-    - {x: 0, y: 1}
-    - {x: -1, y: 1}
-    - {x: 1, y: 0}
-  - name: Sblock
-    origin: {x: 0, y: 0}
-    points:
-    - {x: 0, y: 1}
-    - {x: 1, y: 1}
-    - {x: -1, y: 0}
+  colors:
+  - {r: 1, g: 0, b: 0, a: 1}
+  - {r: 0.058250275, g: 0.7264151, b: 0.18095669, a: 0}
+  - {r: 0.038047332, g: 0.30282366, b: 0.8962264, a: 1}
+  - {r: 0.88968486, g: 0.9056604, b: 0.012815925, a: 1}
+  - {r: 0.9528302, g: 0.5156251, b: 0.03146139, a: 1}
 --- !u!4 &887588579
 Transform:
   m_ObjectHideFlags: 0
@@ -301,10 +264,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   template: {fileID: 114204269619700434, guid: 39df6bb7b95694568839d0f206b6a208, type: 2}
+  blockmanager: {fileID: 887588578}
   width: 11
   height: 20
-  blockonscreen: 0
-  gameover: 0
 --- !u!4 &936240089
 Transform:
   m_ObjectHideFlags: 0

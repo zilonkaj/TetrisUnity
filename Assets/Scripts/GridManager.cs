@@ -12,7 +12,6 @@ public class GridManager : MonoBehaviour {
 
     // attached to prefab in Unity. Used as templates to spawn cells in-game
     // (needs to be Instantiated in order to appear in-game).
-    // this is in GridManager because MonoBehavior only wants
     public CellObject template;
 
     public TetrominoManager blockmanager;
@@ -21,55 +20,116 @@ public class GridManager : MonoBehaviour {
     public int width;
     public int height;
 
-    public bool blockonscreen = false;
-    public bool gameover = false;
+    bool blockonscreen = false;
+    bool gameover = false;
     
-
-    // creates grid of Cells width by height
+    // creates grid of Cells by creating "height" Rows of "width" size
     void SpawnGrid()
     {
         for (int y = 0; y < height; y++){
-
             RowObject row = new RowObject(y, width, template);
             grid.Add(row);
-
         }
     }
 
+    // search through grid for cell at coords and return it
     CellObject getCellAtPos(Vector2 coords)
     {
         CellObject cellToReturn = null;
+
         foreach (RowObject row in grid){
             if (row.rownum == coords.y){
                 foreach (CellObject cell in row.row){
                     if (cell.pos.x == coords.x){
                         cellToReturn = cell;
+                        break;
                     }
                 }
-
             }
-
         }
-
-
-
-
         return cellToReturn;
     }
 
-    void SpawnBlock(){
+   
+
+    Tetromino SpawnBlock(){
         // pick random tetromino
-        Tetronimo block = blockmanager.getRandomBlock();
-        CellObject spawn = getCellAtPos(new Vector2(5, height));
+        Tetromino block = blockmanager.getRandomBlock();
+
+        // spawn location is 5, height
+        CellObject spawn = getCellAtPos(new Vector2(5, 16));
+        spawn.changeColor(block.BlockColor);
+
+        // update origin in Tetromino
         block.origin = spawn.pos;
-        foreach (Vector2 points in block.points){
-            points.x = block.origin.x
+        
+        // update positions in Tetromino, get appropiate cell, set color
+        for (int i = 0; i < 3; i++)
+        {
+            block.points[i] += block.origin;
+            CellObject cell = getCellAtPos(block.points[i]);
+            cell.changeColor(block.BlockColor);
+        }
 
+        return block;
+    }
 
+    void MoveBlockDown(Tetromino block)
+    {
+        // reset original origin to white
+        CellObject origin = getCellAtPos(block.origin);
+        origin.changeColor(Color.black);
+
+        // move origin down 1
+        block.origin.y -= 1;
+        origin = getCellAtPos(block.origin);
+        origin.changeColor(block.BlockColor);
+
+        for (int i = 0; i < 3; i++)
+        {
+            Vector2 point = block.points[i];
+            CellObject cell = getCellAtPos(point);
+            cell.changeColor(Color.white);
+            
+            point.y -= 1;
+            block.points[i] = point;
+            cell = getCellAtPos(point);
+            cell.changeColor(block.BlockColor);
         }
     }
 
 
+
+
+
+    IEnumerator TimeDelay(float time, Tetromino block)
+    {
+        yield return new WaitForSeconds(time);
+        MoveBlockDown(block);
+        yield return new WaitForSeconds(time);
+        MoveBlockDown(block);
+        yield return new WaitForSeconds(time);
+        MoveBlockDown(block);
+        yield return new WaitForSeconds(time);
+        MoveBlockDown(block);
+        yield return new WaitForSeconds(time);
+        MoveBlockDown(block);
+        yield return new WaitForSeconds(time);
+        MoveBlockDown(block);
+        Tetromino block2 = SpawnBlock();
+        yield return new WaitForSeconds(time);
+        MoveBlockDown(block2);
+        yield return new WaitForSeconds(time);
+        MoveBlockDown(block2);
+        yield return new WaitForSeconds(time);
+        MoveBlockDown(block2);
+        yield return new WaitForSeconds(time);
+        MoveBlockDown(block2);
+        yield return new WaitForSeconds(time);
+        MoveBlockDown(block2);
+        yield return new WaitForSeconds(time);
+        MoveBlockDown(block2);
+    }
 
 
 
@@ -79,22 +139,21 @@ public class GridManager : MonoBehaviour {
     // Use this for initialization
 	void Start () {
         SpawnGrid();
+        Tetromino block = SpawnBlock();
+        StartCoroutine(TimeDelay(2, block));
 
 
-       
-        //blockOrigin.changeColor('R');
-
-        
         //while (!gameover)
         //{
-          //  SpawnBlock();
+        //  SpawnBlock();
 
 
         //}
-	}
+    }
+
     void Update()
     {
-        //foreach
+        
 
 
     }
