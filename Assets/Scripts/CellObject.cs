@@ -7,6 +7,8 @@ public class CellObject : MonoBehaviour {
 
     public Vector2 pos;
 
+    public bool occupied = false;
+
     public void changeColor(Color color)
     {
         // get renderer. renderer contains material, which displays color

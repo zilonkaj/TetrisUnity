@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -35,6 +36,7 @@ public class GridManager : MonoBehaviour {
     // search through grid for cell at coords and return it
     CellObject getCellAtPos(Vector2 coords)
     {
+
         CellObject cellToReturn = null;
 
         foreach (RowObject row in grid){
@@ -47,6 +49,13 @@ public class GridManager : MonoBehaviour {
                 }
             }
         }
+        
+        // for when block spawns offscreen
+        if (cellToReturn == null)
+        {
+            cellToReturn = getCellAtPos(new Vector2(coords.x, coords.y - 1));
+        }
+
         return cellToReturn;
     }
 
@@ -56,9 +65,10 @@ public class GridManager : MonoBehaviour {
         // pick random tetromino
         Tetromino block = blockmanager.getRandomBlock();
 
-        // spawn location is 5, height
-        CellObject spawn = getCellAtPos(new Vector2(5, 16));
+        // spawn location is 5, height - 1
+        CellObject spawn = getCellAtPos(new Vector2(5, height));
         spawn.changeColor(block.BlockColor);
+        spawn.occupied = true;
 
         // update origin in Tetromino
         block.origin = spawn.pos;
@@ -68,7 +78,19 @@ public class GridManager : MonoBehaviour {
         {
             block.points[i] += block.origin;
             CellObject cell = getCellAtPos(block.points[i]);
-            cell.changeColor(block.BlockColor);
+
+            // if cell offscreen, skip color change
+            if (cell.pos != block.points[i])
+            {
+                continue;
+            }
+            else
+            {
+                cell.changeColor(block.BlockColor);
+            }
+
+            cell.occupied = true;
+
         }
 
         return block;
@@ -76,25 +98,61 @@ public class GridManager : MonoBehaviour {
 
     void MoveBlockDown(Tetromino block)
     {
-        // reset original origin to white
-        CellObject origin = getCellAtPos(block.origin);
-        origin.changeColor(Color.black);
+        // check space below to see if occupied. if occupied, block collided with another
+        Vector2 testpoint = new Vector2(block.origin.x, block.origin.y - 1);
+        CellObject testcell = getCellAtPos(testpoint);
 
-        // move origin down 1
-        block.origin.y -= 1;
-        origin = getCellAtPos(block.origin);
-        origin.changeColor(block.BlockColor);
+        // if cell below not occupied
+        if (!testcell.occupied)
+        {
+            // reset original origin to white
+            CellObject origin = getCellAtPos(block.origin);
+            origin.changeColor(Color.white);
+            origin.occupied = false;
+
+            // move origin down 1
+            block.origin.y -= 1;
+            origin = getCellAtPos(block.origin);
+            origin.changeColor(block.BlockColor);
+            origin.occupied = true;
+        }
+        else
+        {
+            return;
+        }
 
         for (int i = 0; i < 3; i++)
         {
-            Vector2 point = block.points[i];
-            CellObject cell = getCellAtPos(point);
-            cell.changeColor(Color.white);
-            
-            point.y -= 1;
-            block.points[i] = point;
-            cell = getCellAtPos(point);
-            cell.changeColor(block.BlockColor);
+            testpoint = new Vector2(block.points[i].x, block.points[i].y - 1);
+            testcell = getCellAtPos(testpoint);
+
+            if (!testcell.occupied)
+            {
+                Vector2 point = block.points[i];
+                CellObject cell = getCellAtPos(point);
+                cell.changeColor(Color.white);
+                cell.occupied = false;
+
+                point.y -= 1;
+                block.points[i] = point;
+                cell = getCellAtPos(point);
+
+                // if cell offscreen, skip color change
+                if (cell.pos != point)
+                {
+                    continue;
+                }
+                else
+                {
+                    cell.changeColor(block.BlockColor);
+                }
+
+                cell.occupied = true;
+            }
+            else
+            {
+                return;
+            }
         }
     }
 
@@ -116,19 +174,27 @@ public class GridManager : MonoBehaviour {
         MoveBlockDown(block);
         yield return new WaitForSeconds(time);
         MoveBlockDown(block);
-        Tetromino block2 = SpawnBlock();
-        yield return new WaitForSeconds(time);
-        MoveBlockDown(block2);
-        yield return new WaitForSeconds(time);
-        MoveBlockDown(block2);
-        yield return new WaitForSeconds(time);
-        MoveBlockDown(block2);
-        yield return new WaitForSeconds(time);
-        MoveBlockDown(block2);
-        yield return new WaitForSeconds(time);
-        MoveBlockDown(block2);
-        yield return new WaitForSeconds(time);
-        MoveBlockDown(block2);
+        try
+        {
+            Tetromino block2 = SpawnBlock();
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e, this);
+        }
+
+        //yield return new WaitForSeconds(time);
+        //MoveBlockDown(block2);
+        //yield return new WaitForSeconds(time);
+        //MoveBlockDown(block2);
+        //yield return new WaitForSeconds(time);
+        //MoveBlockDown(block2);
+        //yield return new WaitForSeconds(time);
+        //MoveBlockDown(block2);
+        //yield return new WaitForSeconds(time);
+        //MoveBlockDown(block2);
+        //yield return new WaitForSeconds(time);
+        //MoveBlockDown(block2);
     }
 
 
