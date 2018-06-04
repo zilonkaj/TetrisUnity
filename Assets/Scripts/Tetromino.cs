@@ -1,8 +1,10 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Tetromino : MonoBehaviour {
+[Serializable]
+public class Tetromino {
     public Color BlockColor;
 
     bool isFalling = true;

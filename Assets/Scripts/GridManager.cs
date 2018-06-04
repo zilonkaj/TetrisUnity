@@ -5,6 +5,12 @@ using UnityEngine;
 
 public class GridManager : MonoBehaviour {
     
+    public bool gameinProgress;
+    bool gameover = false;
+
+    // defined in Unity
+    public int width;
+    public int height;
 
     // create grid composed of List<CellObjects>. this is to implement
     // "rows". each row will be its own list of CellObjects, and the grid will
@@ -17,13 +23,10 @@ public class GridManager : MonoBehaviour {
 
     public TetrominoManager blockmanager;
 
-    // defined in Unity
-    public int width;
-    public int height;
+    // current falling block
+    public Tetromino block;
 
-    bool blockonscreen = false;
-    bool gameover = false;
-    
+
     // creates grid of Cells by creating "height" Rows of "width" size
     void SpawnGrid()
     {
@@ -36,7 +39,6 @@ public class GridManager : MonoBehaviour {
     // search through grid for cell at coords and return it
     CellObject getCellAtPos(Vector2 coords)
     {
-
         CellObject cellToReturn = null;
 
         foreach (RowObject row in grid){
@@ -50,8 +52,8 @@ public class GridManager : MonoBehaviour {
             }
         }
         
-        // for when block spawns offscreen
-        if (cellToReturn == null)
+        // if block is offscreen and above 0
+        if (cellToReturn == null && coords.y >= 0)
         {
             cellToReturn = getCellAtPos(new Vector2(coords.x, coords.y - 1));
         }
@@ -59,169 +61,145 @@ public class GridManager : MonoBehaviour {
         return cellToReturn;
     }
 
-   
-
     Tetromino SpawnBlock(){
         // pick random tetromino
-        Tetromino block = blockmanager.getRandomBlock();
+        Tetromino spawnblock = blockmanager.getRandomBlock();
 
-        // spawn location is 5, height - 1
-        CellObject spawn = getCellAtPos(new Vector2(5, height));
-        spawn.changeColor(block.BlockColor);
-        spawn.occupied = true;
+        // spawn location is 5, height - 3
+        CellObject spawn = getCellAtPos(new Vector2(5, height - 3));
+        spawn.changeColor(spawnblock.BlockColor);
 
         // update origin in Tetromino
-        block.origin = spawn.pos;
+        spawnblock.origin = spawn.pos;
         
         // update positions in Tetromino, get appropiate cell, set color
         for (int i = 0; i < 3; i++)
         {
-            block.points[i] += block.origin;
-            CellObject cell = getCellAtPos(block.points[i]);
+            spawnblock.points[i] += spawnblock.origin;
+            CellObject cell = getCellAtPos(spawnblock.points[i]);
 
             // if cell offscreen, skip color change
-            if (cell.pos != block.points[i])
+            if (cell.pos != spawnblock.points[i])
             {
                 continue;
             }
             else
             {
-                cell.changeColor(block.BlockColor);
+                cell.changeColor(spawnblock.BlockColor);
             }
 
             cell.occupied = true;
-
         }
 
-        return block;
+        return spawnblock;
     }
 
-    void MoveBlockDown(Tetromino block)
+    void MoveBlock(Tetromino ourblock, char Direction)
     {
-        // check space below to see if occupied. if occupied, block collided with another
-        Vector2 testpoint = new Vector2(block.origin.x, block.origin.y - 1);
-        CellObject testcell = getCellAtPos(testpoint);
+        int subtractx, subtracty;
 
-        // if cell below not occupied
-        if (!testcell.occupied)
+        if (Direction == 'd')
         {
-            // reset original origin to white
-            CellObject origin = getCellAtPos(block.origin);
-            origin.changeColor(Color.white);
-            origin.occupied = false;
-
-            // move origin down 1
-            block.origin.y -= 1;
-            origin = getCellAtPos(block.origin);
-            origin.changeColor(block.BlockColor);
-            origin.occupied = true;
+            subtractx = 0;
+            subtracty = 1;
+        }
+        else if (Direction == 'l')
+        {
+            subtractx = 1;
+            subtracty = 0;
         }
         else
         {
+            subtractx = -1;
+            subtracty = 0;
+        }
+
+
+        // check space below to see if occupied. if occupied, block collided with another
+        Vector2 testpoint = new Vector2(ourblock.origin.x - (subtractx), ourblock.origin.y - (subtracty));
+        CellObject testcell = getCellAtPos(testpoint);
+        CellObject origin = getCellAtPos(ourblock.origin);
+       
+        // if cell below not bottom or not occupied 
+        if (testcell != null && !testcell.occupied)
+        {
+            // reset previous origin to white
+            origin.changeColor(Color.white);
+
+            // move origin
+            ourblock.origin.x -= (subtractx);
+            ourblock.origin.y -= (subtracty);
+            origin = getCellAtPos(ourblock.origin);
+            origin.changeColor(ourblock.BlockColor);
+        }
+
+        // block collided, so spawn new one
+        else
+        {
+            origin.occupied = true;
+
+            block = SpawnBlock();
             return;
         }
 
         for (int i = 0; i < 3; i++)
         {
-            testpoint = new Vector2(block.points[i].x, block.points[i].y - 1);
+            testpoint = new Vector2(ourblock.points[i].x - (subtractx), ourblock.points[i].y - (subtracty));
             testcell = getCellAtPos(testpoint);
 
-            if (!testcell.occupied)
+            if (testcell != null && !testcell.occupied)
             {
-                Vector2 point = block.points[i];
+                Vector2 point = ourblock.points[i];
                 CellObject cell = getCellAtPos(point);
                 cell.changeColor(Color.white);
-                cell.occupied = false;
 
-                point.y -= 1;
-                block.points[i] = point;
+                point.x -= (subtractx);
+                point.y -= (subtracty);
+                ourblock.points[i] = point;
                 cell = getCellAtPos(point);
+                cell.changeColor(ourblock.BlockColor);
 
-                // if cell offscreen, skip color change
-                if (cell.pos != point)
-                {
-                    continue;
-                }
-                else
-                {
-                    cell.changeColor(block.BlockColor);
-                }
-
-                cell.occupied = true;
             }
             else
             {
+                Vector2 point = new Vector2(ourblock.points[i].x, ourblock.points[i].y);
+                CellObject cell = getCellAtPos(point);
+                cell.occupied = true;
+                block = SpawnBlock();
                 return;
             }
         }
     }
 
-
-
-
-
-    IEnumerator TimeDelay(float time, Tetromino block)
+    IEnumerator TimeDelay(float time)
     {
-        yield return new WaitForSeconds(time);
-        MoveBlockDown(block);
-        yield return new WaitForSeconds(time);
-        MoveBlockDown(block);
-        yield return new WaitForSeconds(time);
-        MoveBlockDown(block);
-        yield return new WaitForSeconds(time);
-        MoveBlockDown(block);
-        yield return new WaitForSeconds(time);
-        MoveBlockDown(block);
-        yield return new WaitForSeconds(time);
-        MoveBlockDown(block);
-        try
-        {
-            Tetromino block2 = SpawnBlock();
+        while (gameinProgress){
+            yield return new WaitForSeconds(time);
+            MoveBlock(block, 'd');
         }
-        catch (Exception e)
-        {
-            Debug.LogException(e, this);
-        }
-
-        //yield return new WaitForSeconds(time);
-        //MoveBlockDown(block2);
-        //yield return new WaitForSeconds(time);
-        //MoveBlockDown(block2);
-        //yield return new WaitForSeconds(time);
-        //MoveBlockDown(block2);
-        //yield return new WaitForSeconds(time);
-        //MoveBlockDown(block2);
-        //yield return new WaitForSeconds(time);
-        //MoveBlockDown(block2);
-        //yield return new WaitForSeconds(time);
-        //MoveBlockDown(block2);
     }
-
-
-
-
-
 
     // Use this for initialization
 	void Start () {
+        gameinProgress = true;
         SpawnGrid();
-        Tetromino block = SpawnBlock();
-        StartCoroutine(TimeDelay(2, block));
-
-
-        //while (!gameover)
-        //{
-        //  SpawnBlock();
-
-
-        //}
+        block = SpawnBlock();
+        StartCoroutine(TimeDelay(.2f)); 
     }
 
     void Update()
     {
-        
-
-
+        if (Input.GetKeyDown(KeyCode.LeftArrow)){
+            MoveBlock(block, 'l');
+        }
+        if (Input.GetKeyDown(KeyCode.RightArrow))
+        {
+            MoveBlock(block, 'r');
+        }
+        if (Input.GetKeyDown(KeyCode.DownArrow))
+        {
+            MoveBlock(block, 'd');
+        }
     }
 }
 
