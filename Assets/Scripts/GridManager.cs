@@ -6,7 +6,6 @@ using UnityEngine;
 public class GridManager : MonoBehaviour {
     
     public bool gameinProgress;
-    bool gameover = false;
 
     // defined in Unity
     public int width;
@@ -16,6 +15,7 @@ public class GridManager : MonoBehaviour {
     // "rows". each row will be its own list of CellObjects, and the grid will
     // have height amount of rows
     List<RowObject> grid = new List<RowObject>();
+    RowObject row21 = null;
 
     // attached to prefab in Unity. Used as templates to spawn cells in-game
     // (needs to be Instantiated in order to appear in-game).
@@ -87,16 +87,45 @@ public class GridManager : MonoBehaviour {
             {
                 cell.changeColor(spawnblock.BlockColor);
             }
-
-            cell.occupied = true;
         }
 
         return spawnblock;
     }
 
-    void MoveBlock(Tetromino ourblock, char Direction)
+    // 0 is no collision. 1 is collision. 2 is side wall collision
+    int CheckCollision(Tetromino activeblock, int subx, int suby)
     {
-        int subtractx, subtracty;
+        List<Vector2> allpoints = activeblock.GetAllPoints();
+
+        foreach (Vector2 point in allpoints)
+        {
+            Vector2 testpoint = new Vector2(point.x - (subx), point.y - (suby));
+            CellObject testcell = getCellAtPos(testpoint);
+
+            if (testcell == null)
+            {
+                if (testpoint.y >= 0)
+                {
+                    return 2;
+                }
+                else
+                {
+                    return 1;
+                }
+            }
+
+            if (testcell.occupied)
+            {
+                return 1;
+            }
+        }
+
+        return 0;
+    }
+
+    void MoveBlock(Tetromino activeblock, char Direction)
+    {
+        int subtractx, subtracty, collision, clearedrow;
 
         if (Direction == 'd')
         {
@@ -108,68 +137,145 @@ public class GridManager : MonoBehaviour {
             subtractx = 1;
             subtracty = 0;
         }
-        else
+        else if (Direction == 'r')
         {
             subtractx = -1;
             subtracty = 0;
         }
-
-
-        // check space below to see if occupied. if occupied, block collided with another
-        Vector2 testpoint = new Vector2(ourblock.origin.x - (subtractx), ourblock.origin.y - (subtracty));
-        CellObject testcell = getCellAtPos(testpoint);
-        CellObject origin = getCellAtPos(ourblock.origin);
-       
-        // if cell below not bottom or not occupied 
-        if (testcell != null && !testcell.occupied)
-        {
-            // reset previous origin to white
-            origin.changeColor(Color.white);
-
-            // move origin
-            ourblock.origin.x -= (subtractx);
-            ourblock.origin.y -= (subtracty);
-            origin = getCellAtPos(ourblock.origin);
-            origin.changeColor(ourblock.BlockColor);
-        }
-
-        // block collided, so spawn new one
         else
         {
-            origin.occupied = true;
+            subtractx = 0;
+            subtracty = 0;
+            int result = 0;
+            int forresult;
+
+            for (forresult = 0; result == 0; forresult++)
+            {
+                result = CheckCollision(activeblock, subtractx, forresult);
+            }
+
+
+            UpdateCells(activeblock, subtractx, forresult - 2);
+            MoveBlock(activeblock, 'd');
+        }
+
+        collision = CheckCollision(activeblock, subtractx, subtracty);
+
+
+        // if collision, spawn new block
+        if (collision == 1)
+        {
+            foreach (Vector2 finalpoint in activeblock.GetAllPoints())
+            {
+                CellObject finalCell = getCellAtPos(finalpoint);
+                finalCell.occupied = true;
+            }
+
+            foreach (RowObject row in grid)
+            {
+                clearedrow = row.ClearRow();
+                if (clearedrow != -1)
+                {
+                    MoveRowsDown(clearedrow);
+                }
+            }
 
             block = SpawnBlock();
             return;
         }
 
+        if (collision == 2)
+        {
+            return;
+        }
+
+        UpdateCells(activeblock, subtractx, subtracty);
+    }
+
+   
+
+    void UpdateCells(Tetromino activeblock, int subx, int suby)
+    {
+        List<CellObject> prevCells = new List<CellObject>();
+        List<CellObject> newCells = new List<CellObject>();
+
+        // set all prev cells to white
+        prevCells.Add(getCellAtPos(activeblock.origin));
+
         for (int i = 0; i < 3; i++)
         {
-            testpoint = new Vector2(ourblock.points[i].x - (subtractx), ourblock.points[i].y - (subtracty));
-            testcell = getCellAtPos(testpoint);
+            prevCells.Add(getCellAtPos(activeblock.points[i]));
+        }
 
-            if (testcell != null && !testcell.occupied)
+        foreach (CellObject prevcell in prevCells)
+        {
+            prevcell.changeColor(Color.white);
+        }
+
+        // subtract/add change in direction
+        activeblock.origin.x -= (subx);
+        activeblock.origin.y -= (suby);
+        newCells.Add(getCellAtPos(activeblock.origin));
+
+        for (int i = 0; i < 3; i++)
+        {
+            Vector2 prevpoint = activeblock.points[i];
+            prevpoint.x -= (subx);
+            prevpoint.y -= (suby);
+            activeblock.points[i] = prevpoint;
+            newCells.Add(getCellAtPos(activeblock.points[i]));
+        }
+
+        // set new cells to BlockColor
+        foreach (CellObject newcell in newCells)
+        {
+            newcell.changeColor(activeblock.BlockColor);
+        }
+    }
+
+    void MoveRowsDown(int startrow)
+    {
+        RowObject currentrow = null;
+        RowObject rowabove = null;
+
+        for (int r = startrow; r < height - 1; r++)
+        {
+
+            // find two rows to swap
+            foreach (RowObject row in grid)
             {
-                Vector2 point = ourblock.points[i];
-                CellObject cell = getCellAtPos(point);
-                cell.changeColor(Color.white);
-
-                point.x -= (subtractx);
-                point.y -= (subtracty);
-                ourblock.points[i] = point;
-                cell = getCellAtPos(point);
-                cell.changeColor(ourblock.BlockColor);
-
+                if (row.rownum == r)
+                {
+                    currentrow = row;
+                }
+                if (row.rownum == (r + 1))
+                {
+                    rowabove = row;
+                    break;
+                }
             }
-            else
+
+            foreach (CellObject currentcell in currentrow.row)
             {
-                Vector2 point = new Vector2(ourblock.points[i].x, ourblock.points[i].y);
-                CellObject cell = getCellAtPos(point);
-                cell.occupied = true;
-                block = SpawnBlock();
-                return;
+                foreach (CellObject abovecell in rowabove.row)
+                {
+                    if (currentcell.pos.x == abovecell.pos.x)
+                    {
+                        currentcell.occupied = abovecell.occupied;
+                        currentcell.changeColor(abovecell.GetColor());
+                    }
+                }
+            }
+
+            foreach (CellObject abovecell in rowabove.row)
+            {
+                abovecell.occupied = false;
+                abovecell.changeColor(Color.white);
             }
         }
     }
+
+
 
     IEnumerator TimeDelay(float time)
     {
@@ -179,12 +285,35 @@ public class GridManager : MonoBehaviour {
         }
     }
 
+    // stop game if gameover
+    void CheckForGameOver()
+    {
+        foreach (CellObject cell in row21.row)
+        {
+            if (cell.occupied && gameinProgress)
+            {
+                print("game over");
+                gameinProgress = false;
+            }
+        }
+    }
+
     // Use this for initialization
 	void Start () {
         gameinProgress = true;
         SpawnGrid();
+
+        // get row 21 (game over row)
+        foreach (RowObject row in grid)
+        {
+            if (row.rownum == 21)
+            {
+                row21 = row;
+            }
+        }
+
         block = SpawnBlock();
-        StartCoroutine(TimeDelay(.2f)); 
+        StartCoroutine(TimeDelay(1f)); 
     }
 
     void Update()
@@ -200,6 +329,12 @@ public class GridManager : MonoBehaviour {
         {
             MoveBlock(block, 'd');
         }
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            MoveBlock(block, 'S');
+        }
+
+        CheckForGameOver();
     }
 }
 

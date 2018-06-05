@@ -37,7 +37,7 @@ public class TetrominoManager : MonoBehaviour {
     }
 
     // Randomizes color list so blocks get new default color each game.
-   void RandomizeColors() {
+    void RandomizeColors() {
         for (int i = 0; i < shapes.Count; i++){
             colors.Add(new Color(Random.Range(0.1f, 0.8f), Random.Range(0.1f, 0.8f), Random.Range(0.1f, 0.8f)));
         }
@@ -46,13 +46,13 @@ public class TetrominoManager : MonoBehaviour {
     void Start()
     {
         shapes.Add(I_Block);
-        shapes.Add(L_Block);
-        shapes.Add(J_Block);
+        //shapes.Add(L_Block);
+        //shapes.Add(J_Block);
         shapes.Add(Plus);
-        shapes.Add(Z_Block);
-        shapes.Add(S_Block);
+        //shapes.Add(Z_Block);
+        //shapes.Add(S_Block);
         shapes.Add(Square);
-        shapes.Add(T_Block);
+        //shapes.Add(T_Block);
 
         RandomizeColors();
     }

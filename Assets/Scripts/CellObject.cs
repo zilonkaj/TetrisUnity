@@ -17,4 +17,10 @@ public class CellObject : MonoBehaviour {
         r.material.SetColor("_Color", color);
     }
 
+    public Color GetColor()
+    {
+        Renderer r = GetComponent<Renderer>();
+
+        return (r.material.color); 
+    }
 }

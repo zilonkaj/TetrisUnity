@@ -9,6 +9,28 @@ public class RowObject : MonoBehaviour {
     // which row this object represents
     public int rownum; 
 	
+    public int ClearRow()
+    {
+        bool rowoccupied = true;
+
+        foreach (CellObject cell in row)
+        {
+            if (cell.occupied == false)
+                rowoccupied = false;
+        }
+
+        if (rowoccupied)
+        {
+            foreach (CellObject cell in row)
+            {
+                cell.changeColor(Color.white);
+            }
+            return rownum;
+        }
+
+        return -1;
+    }
+
     public RowObject(int y, int width, CellObject template) {
         // assign rownum
         rownum = y;
