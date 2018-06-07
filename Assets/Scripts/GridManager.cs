@@ -5,16 +5,21 @@ using UnityEngine;
 
 public class GridManager : MonoBehaviour {
     
-    public bool gameinProgress;
+    public bool gameinProgress = false;
+    public bool gameover = false;
+
+    public int score = 0;
 
     // defined in Unity
     public int width;
     public int height;
 
-    // create grid composed of List<CellObjects>. this is to implement
-    // "rows". each row will be its own list of CellObjects, and the grid will
+    // create grid composed of List<RowObjects>. 
+    // each row will be a list of CellObjects, and the grid will
     // have height amount of rows
     List<RowObject> grid = new List<RowObject>();
+
+    // row 21 is row above camera
     RowObject row21 = null;
 
     // attached to prefab in Unity. Used as templates to spawn cells in-game
@@ -26,7 +31,6 @@ public class GridManager : MonoBehaviour {
     // current falling block
     public Tetromino block;
 
-
     // creates grid of Cells by creating "height" Rows of "width" size
     void SpawnGrid()
     {
@@ -36,77 +40,73 @@ public class GridManager : MonoBehaviour {
         }
     }
 
-    // search through grid for cell at coords and return it
     CellObject getCellAtPos(Vector2 coords)
     {
         CellObject cellToReturn = null;
 
         foreach (RowObject row in grid){
-            if (row.rownum == coords.y){
-                foreach (CellObject cell in row.row){
-                    if (cell.pos.x == coords.x){
+            if (row.rownum == coords.y)
+            {
+                foreach (CellObject cell in row.row)
+                {
+                    if (cell.pos.x == coords.x)
+                    {
                         cellToReturn = cell;
                         break;
                     }
                 }
+                break;
             }
         }
-        
-        // if block is offscreen and above 0
-        if (cellToReturn == null && coords.y >= 0)
-        {
-            cellToReturn = getCellAtPos(new Vector2(coords.x, coords.y - 1));
-        }
-
         return cellToReturn;
     }
 
     Tetromino SpawnBlock(){
-        // pick random tetromino
-        Tetromino spawnblock = blockmanager.getRandomBlock();
+        
+        Tetromino activeblock = blockmanager.getRandomBlock();
 
         // spawn location is 5, height - 3
-        CellObject spawn = getCellAtPos(new Vector2(5, height - 3));
-        spawn.changeColor(spawnblock.BlockColor);
+        CellObject spawncell = getCellAtPos(new Vector2(5, height - 3));
+        spawncell.changeColor(activeblock.BlockColor);
 
         // update origin in Tetromino
-        spawnblock.origin = spawn.pos;
+        activeblock.origin = spawncell.pos;
         
-        // update positions in Tetromino, get appropiate cell, set color
+        // update positions, get appropiate cell, set color
         for (int i = 0; i < 3; i++)
         {
-            spawnblock.points[i] += spawnblock.origin;
-            CellObject cell = getCellAtPos(spawnblock.points[i]);
+            activeblock.points[i] += activeblock.origin;
+            CellObject cell = getCellAtPos(activeblock.points[i]);
 
-            // if cell offscreen, skip color change
-            if (cell.pos != spawnblock.points[i])
+            if (cell != null)
             {
-                continue;
-            }
-            else
-            {
-                cell.changeColor(spawnblock.BlockColor);
+                cell.changeColor(activeblock.BlockColor);
             }
         }
 
-        return spawnblock;
+        return activeblock;
     }
 
-    // 0 is no collision. 1 is collision. 2 is side wall collision
-    int CheckCollision(Tetromino activeblock, int subx, int suby)
+    // 0 is no collision. 1 is collision. 2 is left wall collision, 3 is right wall collision
+    int CheckCollision(List<Vector2> newpoints)
     {
-        List<Vector2> allpoints = activeblock.GetAllPoints();
-
-        foreach (Vector2 point in allpoints)
+        foreach (Vector2 point in newpoints)
         {
-            Vector2 testpoint = new Vector2(point.x - (subx), point.y - (suby));
-            CellObject testcell = getCellAtPos(testpoint);
+            CellObject testcell = getCellAtPos(point);
 
             if (testcell == null)
             {
-                if (testpoint.y >= 0)
+                if (point.y >= 0)
                 {
-                    return 2;
+                    if (point.x < 0)
+                    {
+                        return 2;
+                    }
+                    else
+                    {
+                        return 3;   
+                    }
+
                 }
                 else
                 {
@@ -125,7 +125,7 @@ public class GridManager : MonoBehaviour {
 
     void MoveBlock(Tetromino activeblock, char Direction)
     {
-        int subtractx, subtracty, collision, clearedrow;
+        int subtractx, subtracty, collision;
 
         if (Direction == 'd')
         {
@@ -137,110 +137,184 @@ public class GridManager : MonoBehaviour {
             subtractx = 1;
             subtracty = 0;
         }
-        else if (Direction == 'r')
+        else
         {
             subtractx = -1;
             subtracty = 0;
         }
-        else
+
+        // create list to send to CheckCollision()
+        List<Vector2> testpoints = new List<Vector2>();
+
+        // add points
+        foreach (Vector2 point in activeblock.points)
         {
-            subtractx = 0;
-            subtracty = 0;
-            int result = 0;
-            int forresult;
-
-            for (forresult = 0; result == 0; forresult++)
-            {
-                result = CheckCollision(activeblock, subtractx, forresult);
-            }
-
-
-            UpdateCells(activeblock, subtractx, forresult - 2);
-            MoveBlock(activeblock, 'd');
+            Vector2 newpoint = point;
+            newpoint.x -= subtractx;
+            newpoint.y -= subtracty;
+            testpoints.Add(newpoint);
         }
 
-        collision = CheckCollision(activeblock, subtractx, subtracty);
+        // make copy of testpoints in case no collision
+        List<Vector2> newpoints = new List<Vector2>(testpoints);
 
+        // add origin
+        Vector2 neworigin = activeblock.origin;
+        neworigin.x -= subtractx;
+        neworigin.y -= subtracty;
+        testpoints.Add(neworigin);
 
-        // if collision, spawn new block
+        collision = CheckCollision(testpoints);
+
+        // if sidewall collision, ignore it
+        if (collision > 1)
+        {
+            return;
+        }
         if (collision == 1)
         {
-            foreach (Vector2 finalpoint in activeblock.GetAllPoints())
-            {
-                CellObject finalCell = getCellAtPos(finalpoint);
-                finalCell.occupied = true;
-            }
-
-            foreach (RowObject row in grid)
-            {
-                clearedrow = row.ClearRow();
-                if (clearedrow != -1)
-                {
-                    MoveRowsDown(clearedrow);
-                }
-            }
-
+            List<Vector2> prevpoints = new List<Vector2>(activeblock.points);
+            prevpoints.Add(activeblock.origin);
+            SetCellsOccupied(prevpoints);
             block = SpawnBlock();
             return;
         }
+        else
+        {
+            UpdateCells(activeblock, testpoints);
 
-        if (collision == 2)
+            // change coords
+            activeblock.origin = neworigin;
+            activeblock.points = newpoints;
+        }
+    }
+
+    void SpacePress(Tetromino activeblock)
+    {
+        int collisResult = -1;
+        int distance;
+
+        List<Vector2> newpoints = new List<Vector2>();
+        List<Vector2> finalpoints = new List<Vector2>();
+
+        for (distance = 0; collisResult != 1; distance++)
+        {
+            List<Vector2> testpoints = new List<Vector2>();
+
+            foreach (Vector2 point in activeblock.GetAllPoints())
+            {
+                Vector2 testpoint = new Vector2(point.x, point.y - distance);
+                testpoints.Add(testpoint);
+            }
+
+            collisResult = CheckCollision(testpoints);
+            newpoints = testpoints;
+        }
+
+        // add 1 back because of grid start at 0 
+        foreach (Vector2 point in newpoints)
+        {
+            Vector2 finalpoint = new Vector2(point.x, point.y + 1);
+            finalpoints.Add(finalpoint);
+        }
+
+        SetCellsOccupied(finalpoints);
+        UpdateCells(activeblock, finalpoints);
+        block = SpawnBlock();
+    }
+
+    void SetCellsOccupied(List<Vector2> finalpoints)
+    {
+        foreach (Vector2 point in finalpoints)
+        {
+            CellObject finalCell = getCellAtPos(point);
+            if (finalCell != null)
+            {
+                finalCell.occupied = true;   
+            }
+        }
+    }
+
+    // change what cells a Tetromino appears in from previous coords to newpoints
+    void UpdateCells(Tetromino activeblock, List<Vector2> newpoints)
+    {
+        List<CellObject> newCells = new List<CellObject>();
+
+        foreach (Vector2 point in activeblock.GetAllPoints())
+        {
+            CellObject cell = getCellAtPos(point);
+            if (cell != null)
+            {
+                cell.changeColor(Color.white);
+            }
+        }
+
+        foreach (Vector2 point in newpoints)
+        {
+            newCells.Add(getCellAtPos(point));
+        }
+
+        foreach (CellObject newcell in newCells)
+        {
+            if (newcell != null)
+            {
+                newcell.changeColor(activeblock.BlockColor);
+            }
+        }
+    }
+
+    void Rotate90(Tetromino activeblock, char sign)
+    {
+        if (!activeblock.allowrotation)
         {
             return;
         }
 
-        UpdateCells(activeblock, subtractx, subtracty);
+        List<Vector2> localpoints = activeblock.RotateCoords90(sign);
+        List<Vector2> newpoints = new List<Vector2>();
+        int collision;
+
+        foreach (Vector2 point in localpoints)
+        {
+            Vector2 newpoint = point + activeblock.origin;
+            newpoints.Add(newpoint);
+        }
+
+        // origin needs to be sent to CheckCollision & UpdateCells
+        List<Vector2> updatepoints = new List<Vector2>(newpoints);
+        updatepoints.Add(activeblock.origin);
+
+        collision = CheckCollision(updatepoints);
+        if (collision != 0)
+        {
+            if (collision == 2)
+            {
+                MoveBlock(activeblock, 'r');
+            }
+            if (collision == 3)
+            {
+                MoveBlock(activeblock, 'l');
+            }
+
+            Rotate90(activeblock, sign);
+            return;
+        }
+
+        UpdateCells(activeblock, updatepoints);
+
+        // replace non-origin points
+        activeblock.points = newpoints;
     }
 
-   
-
-    void UpdateCells(Tetromino activeblock, int subx, int suby)
-    {
-        List<CellObject> prevCells = new List<CellObject>();
-        List<CellObject> newCells = new List<CellObject>();
-
-        // set all prev cells to white
-        prevCells.Add(getCellAtPos(activeblock.origin));
-
-        for (int i = 0; i < 3; i++)
-        {
-            prevCells.Add(getCellAtPos(activeblock.points[i]));
-        }
-
-        foreach (CellObject prevcell in prevCells)
-        {
-            prevcell.changeColor(Color.white);
-        }
-
-        // subtract/add change in direction
-        activeblock.origin.x -= (subx);
-        activeblock.origin.y -= (suby);
-        newCells.Add(getCellAtPos(activeblock.origin));
-
-        for (int i = 0; i < 3; i++)
-        {
-            Vector2 prevpoint = activeblock.points[i];
-            prevpoint.x -= (subx);
-            prevpoint.y -= (suby);
-            activeblock.points[i] = prevpoint;
-            newCells.Add(getCellAtPos(activeblock.points[i]));
-        }
-
-        // set new cells to BlockColor
-        foreach (CellObject newcell in newCells)
-        {
-            newcell.changeColor(activeblock.BlockColor);
-        }
-    }
-
+    // cascades if multiple rows full
     void MoveRowsDown(int startrow)
     {
         RowObject currentrow = null;
         RowObject rowabove = null;
 
-        for (int r = startrow; r < height - 1; r++)
+        // height - 4 to ignore rows above camera
+        for (int r = startrow; r < height - 4; r++)
         {
-
             // find two rows to swap
             foreach (RowObject row in grid)
             {
@@ -251,6 +325,11 @@ public class GridManager : MonoBehaviour {
                 if (row.rownum == (r + 1))
                 {
                     rowabove = row;
+                }
+
+                // end loop early if both found
+                if (currentrow != null && rowabove != null)
+                {
                     break;
                 }
             }
@@ -263,6 +342,7 @@ public class GridManager : MonoBehaviour {
                     {
                         currentcell.occupied = abovecell.occupied;
                         currentcell.changeColor(abovecell.GetColor());
+                        break;
                     }
                 }
             }
@@ -274,8 +354,6 @@ public class GridManager : MonoBehaviour {
             }
         }
     }
-
-
 
     IEnumerator TimeDelay(float time)
     {
@@ -292,15 +370,62 @@ public class GridManager : MonoBehaviour {
         {
             if (cell.occupied && gameinProgress)
             {
-                print("game over");
                 gameinProgress = false;
+                gameover = true;
+                break;
             }
         }
     }
 
+    void ClearBoard()
+    {
+        foreach (RowObject row in grid)
+        {
+            foreach (CellObject cell in row.row)
+            {
+                cell.changeColor(Color.white);
+                cell.occupied = false;
+            }
+        }
+
+    }
+
+    void CheckForFullRow()
+    {
+        int fullrow;
+
+        foreach (RowObject row in grid)
+        {
+            // ClearRow() returns num > 0 if its full
+            fullrow = row.ClearRow();
+            if (fullrow != -1)
+            {
+                score += 100;
+                MoveRowsDown(fullrow);
+                break;
+            }
+        }
+    }
+
+    public void StartGame()
+    {
+        // check if game already in progress
+        if (!gameinProgress)
+        {
+            ClearBoard();
+            gameinProgress = true;
+
+            block = SpawnBlock();
+            StartCoroutine(TimeDelay(1f));
+        }
+    }
+
+
     // Use this for initialization
 	void Start () {
-        gameinProgress = true;
+
+        gameinProgress = false;
+
         SpawnGrid();
 
         // get row 21 (game over row)
@@ -309,33 +434,44 @@ public class GridManager : MonoBehaviour {
             if (row.rownum == 21)
             {
                 row21 = row;
+                break;
             }
         }
-
-        block = SpawnBlock();
-        StartCoroutine(TimeDelay(1f)); 
     }
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.LeftArrow)){
-            MoveBlock(block, 'l');
-        }
-        if (Input.GetKeyDown(KeyCode.RightArrow))
+        if (gameinProgress)
         {
-            MoveBlock(block, 'r');
-        }
-        if (Input.GetKeyDown(KeyCode.DownArrow))
-        {
-            MoveBlock(block, 'd');
-        }
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            MoveBlock(block, 'S');
+            CheckForGameOver();
+
+            CheckForFullRow();
+
+            if (Input.GetKeyDown(KeyCode.LeftArrow))
+            {
+                MoveBlock(block, 'l');
+            }
+            if (Input.GetKeyDown(KeyCode.RightArrow))
+            {
+                MoveBlock(block, 'r');
+            }
+            if (Input.GetKeyDown(KeyCode.DownArrow))
+            {
+                MoveBlock(block, 'd');
+            }
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                SpacePress(block);
+            }
+            if (Input.GetKeyDown(KeyCode.Z))
+            {
+                Rotate90(block, 'P');
+            }
+            if (Input.GetKeyDown(KeyCode.X))
+            {
+                Rotate90(block, 'N');
+            } 
         }
 
-        CheckForGameOver();
     }
 }
-
-

@@ -5,8 +5,7 @@ using UnityEngine;
 public class RowObject : MonoBehaviour {
 
     public List<CellObject> row = new List<CellObject>();
-    
-    // which row this object represents
+
     public int rownum; 
 	
     public int ClearRow()
@@ -16,7 +15,10 @@ public class RowObject : MonoBehaviour {
         foreach (CellObject cell in row)
         {
             if (cell.occupied == false)
+            {
                 rowoccupied = false;
+                break;
+            }
         }
 
         if (rowoccupied)
@@ -24,6 +26,7 @@ public class RowObject : MonoBehaviour {
             foreach (CellObject cell in row)
             {
                 cell.changeColor(Color.white);
+                cell.occupied = false;
             }
             return rownum;
         }
@@ -32,7 +35,6 @@ public class RowObject : MonoBehaviour {
     }
 
     public RowObject(int y, int width, CellObject template) {
-        // assign rownum
         rownum = y;
 
         // used to give objects in inspector a name
@@ -46,13 +48,11 @@ public class RowObject : MonoBehaviour {
             // store grid pos in CellObject
             newCell.pos = new Vector2(x, y);
 
-            // for now, using same coord system as in game. will be modified later
             newCell.transform.position = new Vector3(x, y, 0);
 
             // make holder parent of newCell to organize scene list 
             newCell.transform.parent = holder.transform;
 
-            // add to List
             row.Add(newCell);
         }
     }

@@ -64,6 +64,7 @@
     <Compile Include="Assets\Scripts\RowObject.cs" />
     <Compile Include="Assets\Scripts\Tetromino.cs" />
     <Compile Include="Assets\Scripts\TetrominoManager.cs" />
+    <Compile Include="Assets\Scripts\UIManager.cs" />
     <Reference Include="UnityEditor.StandardEvents">
       <HintPath>/Users/zilonkaj/Documents/TetrisUnity/Library/ScriptAssemblies/UnityEditor.StandardEvents.dll</HintPath>
     </Reference>
