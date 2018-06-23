@@ -2,7 +2,7 @@
 
 As the name says, Tetris designed in Unity.
 
-This was my "Intro to Unity" project I built while working at a summer internship with the guys at Stocket. Shoutouts to them for all the guidance with making this game actually work, as well as with the many intricacies of using Unity. You should check their game out (which I may be working with them on...) at www.stocket.com.
+This was my "Intro to Unity" project I built while working at a summer internship with the development team at Stocket. Shoutouts to them for all the guidance with making this game actually work, as well as with the many intricacies of using Unity.
 
 # Features
 - You can play Tetris
